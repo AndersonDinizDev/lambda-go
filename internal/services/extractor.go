@@ -2,9 +2,10 @@ package services
 
 import (
 	"Lambda/internal/models"
-	"Lambda/pkg/criptografia"
+	"Lambda/pkg/hashutils"
 	"bytes"
 	"context"
+	"errors"
 	"io"
 	"log"
 	"regexp"
@@ -40,6 +41,8 @@ func extractPdfData(data, fileName string) (models.PdfData, error) {
 		cpfClean = strings.ReplaceAll(cpfClean, "-", "")
 
 		u.Cpf = cpfClean
+	} else {
+		return u, errors.New("CPF não encontrado no documento")
 	}
 
 	if len(value) > 1 {
@@ -48,7 +51,7 @@ func extractPdfData(data, fileName string) (models.PdfData, error) {
 		u.Value = valueClean
 	}
 
-	u.Id = criptografia.EncryptInSha256(u.Cpf + "#" + fileName)
+	u.Id = hashutils.GenerateSHA256(u.Cpf + "#" + fileName)
 
 	return u, nil
 
@@ -107,7 +110,7 @@ func (cmd *PdfHanlder) ProcessPDFHandler(ctx context.Context, s3Event events.S3E
 		data, err := extractPdfData(content, fileName)
 
 		if err != nil {
-			log.Printf("CPF não encontrado")
+			log.Println(err)
 			return err
 		}
 

@@ -1,11 +1,11 @@
-package criptografia
+package hashutils
 
 import (
 	"crypto/sha256"
 	"encoding/hex"
 )
 
-func EncryptInSha256(txt string) string {
+func GenerateSHA256(txt string) string {
 
 	hashBytes := sha256.Sum256([]byte(txt))
 
