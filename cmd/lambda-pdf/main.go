@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"log"
+	"os"
 
 	"Lambda/internal/services"
 
@@ -25,7 +26,7 @@ func main() {
 
 	dynamoConf := &services.DynamoConfig{
 		DynamoClient: dynamoClient,
-		TableName:    "lambda-go-teste-1",
+		TableName:    os.Getenv("DYNAMODB_TABLE"),
 	}
 
 	s3Conf := &services.PdfHanlder{

@@ -18,3 +18,8 @@ bootstrap
 .DS_Store
 Thumbs.db
 /vendor/
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
