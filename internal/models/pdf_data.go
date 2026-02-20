@@ -1,6 +1,7 @@
 package models
 
 type PdfData struct {
-	Cpf   string `json:"cpf"`
-	Value string `json:"value"`
+	Id    string `json:"id" dynamodbav:"id"`
+	Cpf   string `json:"cpf" dynamodbav:"cpf"`
+	Value string `json:"value" dynamodbav:"value"`
 }

@@ -2,6 +2,7 @@ package services
 
 import (
 	"Lambda/internal/models"
+	"Lambda/pkg/criptografia"
 	"bytes"
 	"context"
 	"io"
@@ -20,11 +21,12 @@ var (
 	regexValue = regexp.MustCompile(`R\$\s?(\d{1,3}(?:\.\d{3})*,\d{2})`)
 )
 
-type ApplicationConfig struct {
+type PdfHanlder struct {
 	S3Client *s3.Client
+	Dynamo   *DynamoConfig
 }
 
-func extractPdfData(data string) (models.PdfData, error) {
+func extractPdfData(data, fileName string) (models.PdfData, error) {
 
 	var u models.PdfData
 
@@ -46,11 +48,13 @@ func extractPdfData(data string) (models.PdfData, error) {
 		u.Value = valueClean
 	}
 
+	u.Id = criptografia.EncryptInSha256(u.Cpf + "#" + fileName)
+
 	return u, nil
 
 }
 
-func (cmd *ApplicationConfig) ProcessPDFHandler(ctx context.Context, s3Event events.S3Event) error {
+func (cmd *PdfHanlder) ProcessPDFHandler(ctx context.Context, s3Event events.S3Event) error {
 
 	for _, record := range s3Event.Records {
 
@@ -100,14 +104,21 @@ func (cmd *ApplicationConfig) ProcessPDFHandler(ctx context.Context, s3Event eve
 		buf.ReadFrom(b)
 		content := buf.String()
 
-		data, err := extractPdfData(content)
+		data, err := extractPdfData(content, fileName)
 
 		if err != nil {
 			log.Printf("CPF não encontrado")
 			return err
 		}
 
-		log.Println(data)
+		statusSave, err := cmd.Dynamo.SaveData(ctx, data)
+
+		if err != nil {
+			log.Printf("Erro ao salvar os dados no banco de dados")
+			return err
+		}
+
+		log.Println(statusSave)
 
 	}
 

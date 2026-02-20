@@ -9,27 +9,27 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 )
 
-type TableTest struct {
-	DynamoDBClient *dynamodb.Client
-	TableName      string
+type DynamoConfig struct {
+	DynamoClient *dynamodb.Client
+	TableName    string
 }
 
-func (tableTest *TableTest) SaveData(ctx context.Context, pdf models.PdfData) error {
+func (cmd *DynamoConfig) SaveData(ctx context.Context, pdf models.PdfData) (bool, error) {
 
 	item, err := attributevalue.MarshalMap(pdf)
 
 	if err != nil {
-		return err
+		return false, err
 	}
 
-	_, err = tableTest.DynamoDBClient.PutItem(ctx, &dynamodb.PutItemInput{
-		TableName: aws.String(tableTest.TableName),
+	_, err = cmd.DynamoClient.PutItem(ctx, &dynamodb.PutItemInput{
+		TableName: aws.String(cmd.TableName),
 		Item:      item,
 	})
 
 	if err != nil {
-		return err
+		return false, err
 	}
 
-	return nil
+	return true, nil
 }
