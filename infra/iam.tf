@@ -15,7 +15,7 @@ resource "aws_iam_role" "lambda_role" {
 }
 
 resource "aws_iam_policy" "lambda_policy" {
-  name = "lambda_go_test_policy"
+  name        = "lambda_go_test_policy"
   description = "Permissões ao lambda para acesso a s3, dynamodb e cloudwatch"
 
   policy = jsonencode({
@@ -23,23 +23,23 @@ resource "aws_iam_policy" "lambda_policy" {
     Statement = [{
       Effect = "Allow"
       Action = [
-      "dynamodb:PutItem",
+        "dynamodb:PutItem",
         "dynamodb:UpdateItem",
         "dynamodb:GetItem"
       ]
       Resource = aws_dynamodb_table.test_table.arn
-    },
+      },
       {
         Effect = "Allow"
         Action = [
-        "s3:GetObject"
+          "s3:GetObject"
         ]
         Resource = "${aws_s3_bucket.test_bucket.arn}/*"
       },
       {
         Effect = "Allow"
         Action = [
-        "logs:CreateLogGroup",
+          "logs:CreateLogGroup",
           "logs:CreateLogStream",
           "logs:PutLogEvents"
         ]

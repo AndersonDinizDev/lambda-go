@@ -1,5 +1,5 @@
 resource "aws_lambda_permission" "allows_s3_trigger_lambda" {
-  statement_id = "AllowExecutionFromS3Bucket"
+  statement_id  = "AllowExecutionFromS3Bucket"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.lambda_go.function_name
   principal     = "s3.amazonaws.com"
