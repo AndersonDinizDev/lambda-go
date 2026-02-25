@@ -1,7 +1,7 @@
 resource "aws_lambda_event_source_mapping" "allows_sqs_trigger_lambda" {
   event_source_arn = aws_sqs_queue.test_sqs.arn
-  function_name = aws_lambda_function.lambda_go.arn
-  batch_size = 10
+  function_name    = aws_lambda_function.lambda_go.arn
+  batch_size       = 10
 }
 
 resource "aws_s3_bucket_notification" "bucket_notification" {

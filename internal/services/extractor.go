@@ -5,6 +5,7 @@ import (
 	"Lambda/pkg/hashutils"
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"io"
 	"log"
@@ -57,72 +58,85 @@ func extractPdfData(data, fileName string) (models.PdfData, error) {
 
 }
 
-func (cmd *PdfHanlder) ProcessPDFHandler(ctx context.Context, s3Event events.S3Event) error {
+func (cmd *PdfHanlder) ProcessPDFHandler(ctx context.Context, sqsEvent events.SQSEvent) error {
 
-	for _, record := range s3Event.Records {
+	for _, record := range sqsEvent.Records {
 
-		bucketName := record.S3.Bucket.Name
-		fileName := record.S3.Object.Key
+		s3Json := record.Body
 
-		log.Printf("Processando o arquivo [%s] do bucket [%s]", fileName, bucketName)
+		var s3Event events.S3Event
 
-		bucketFile, err := cmd.S3Client.GetObject(ctx, &s3.GetObjectInput{
-			Bucket: aws.String(bucketName),
-			Key:    aws.String(fileName),
-		})
+		err := json.Unmarshal([]byte(s3Json), &s3Event)
 
 		if err != nil {
-			log.Printf("Erro ao encontrar o arquivo [%s] no bucket [%s]", fileName, bucketName)
+			log.Printf("Erro ao decodificar JSON do SQS para S3Event: %v", err)
 			return err
 		}
 
-		defer bucketFile.Body.Close()
+		for _, s3Record := range s3Event.Records {
+			bucketName := s3Record.S3.Bucket.Name
+			fileName := s3Record.S3.Object.Key
 
-		body, err := io.ReadAll(bucketFile.Body)
+			log.Printf("Processando o arquivo [%s] do bucket [%s]", fileName, bucketName)
 
-		if err != nil {
-			log.Printf("Erro ao ler o arquivo [%s]", fileName)
-			return err
+			bucketFile, err := cmd.S3Client.GetObject(ctx, &s3.GetObjectInput{
+				Bucket: aws.String(bucketName),
+				Key:    aws.String(fileName),
+			})
+
+			if err != nil {
+				log.Printf("Erro ao encontrar o arquivo [%s] no bucket [%s]", fileName, bucketName)
+				return err
+			}
+
+			defer bucketFile.Body.Close()
+
+			body, err := io.ReadAll(bucketFile.Body)
+
+			if err != nil {
+				log.Printf("Erro ao ler o arquivo [%s]", fileName)
+				return err
+			}
+
+			readingFromMem := bytes.NewReader(body)
+			fileSize := int64(len(body))
+
+			f, err := pdf.NewReader(readingFromMem, fileSize)
+
+			if err != nil {
+				log.Printf("Erro ao ler o pdf [%s]", fileName)
+				return err
+			}
+
+			var buf bytes.Buffer
+
+			b, err := f.GetPlainText()
+
+			if err != nil {
+				log.Printf("Erro ao obter os textos do pdf [%s]", fileName)
+				return err
+			}
+
+			buf.ReadFrom(b)
+			content := buf.String()
+
+			data, err := extractPdfData(content, fileName)
+
+			if err != nil {
+				log.Println(err)
+				return err
+			}
+
+			statusSave, err := cmd.Dynamo.SaveData(ctx, data)
+
+			if err != nil {
+				log.Printf("Erro ao salvar os dados no banco de dados")
+				return err
+			}
+
+			log.Println(statusSave)
+
 		}
-
-		readingFromMem := bytes.NewReader(body)
-		fileSize := int64(len(body))
-
-		f, err := pdf.NewReader(readingFromMem, fileSize)
-
-		if err != nil {
-			log.Printf("Erro ao ler o pdf [%s]", fileName)
-			return err
-		}
-
-		var buf bytes.Buffer
-
-		b, err := f.GetPlainText()
-
-		if err != nil {
-			log.Printf("Erro ao obter os textos do pdf [%s]", fileName)
-			return err
-		}
-
-		buf.ReadFrom(b)
-		content := buf.String()
-
-		data, err := extractPdfData(content, fileName)
-
-		if err != nil {
-			log.Println(err)
-			return err
-		}
-
-		statusSave, err := cmd.Dynamo.SaveData(ctx, data)
-
-		if err != nil {
-			log.Printf("Erro ao salvar os dados no banco de dados")
-			return err
-		}
-
-		log.Println(statusSave)
-
 	}
 
 	return nil
