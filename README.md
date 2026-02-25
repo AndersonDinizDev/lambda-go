@@ -14,9 +14,10 @@ Este projeto implementa uma função AWS Lambda em Go para processar arquivos PD
 O fluxo de dados segue a seguinte arquitetura:
 
 1.  Usuário/Sistema faz upload de um arquivo `.pdf` no bucket S3 configurado.
-2.  O S3 envia um evento para a função Lambda.
-3.  A função Lambda (runtime `provided.al2023`, arquitetura `arm64`) baixa o arquivo e processa o conteúdo.
-4.  Os dados extraídos (CPF, Valor) são salvos na tabela DynamoDB.
+2.  O S3 envia uma mensagem para o SQS.
+3.  A função Lambda mapeia a fila do SQS e inicia a processamento da fila
+4.  A função Lambda baixa o arquivo na memória e processa o conteúdo.
+5.  Os dados extraídos (CPF, Valor) são salvos na tabela DynamoDB.
 
 ## Pré-requisitos
 
