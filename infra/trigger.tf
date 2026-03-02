@@ -1,7 +1,10 @@
 resource "aws_lambda_event_source_mapping" "allows_sqs_trigger_lambda" {
-  event_source_arn = aws_sqs_queue.test_sqs.arn
-  function_name    = aws_lambda_function.lambda_go.arn
-  batch_size       = 10
+  event_source_arn                   = aws_sqs_queue.test_sqs.arn
+  function_name                      = aws_lambda_function.lambda_go.arn
+  batch_size                         = 10
+  maximum_batching_window_in_seconds = 2
+
+  function_response_types = ["ReportBatchItemFailures"]
 }
 
 resource "aws_s3_bucket_notification" "bucket_notification" {
